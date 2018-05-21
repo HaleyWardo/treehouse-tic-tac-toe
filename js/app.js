@@ -17,6 +17,10 @@ class Player {
   setGameIconClass(cls) {
     document.querySelector(this.gameIconDOMSelector).classList.add(cls);
   }
+
+  removeGameIconClass(cls) {
+    document.querySelector(this.gameIconDOMSelector).classList.remove(cls);
+  }
 }
 
 class GameManager {
@@ -51,9 +55,8 @@ class GameManager {
     newActivePlayer.setGameIconClass('active');
     this._activePlayer = newActivePlayer;
 
-    // Remove all mouseover, click, etc. event handlers OR EDIT THE EXISTING ONES
-    // TO USE THE NEW PLAYER'S 'X' OR 'O'
-    // https://developer.mozilla.org/en-US/docs/Web/API/EventTarget/removeEventListener
+    const unActivePlayer = this.players.filter(player => player.isTurn === false);
+    unActivePlayer[0].removeGameIconClass('active');
   }
 }
 
@@ -106,8 +109,6 @@ startButton.addEventListener('click', () => {
   document.querySelector('.screen-start').remove();
 });
 
-const boxes = document.querySelectorAll('.box');
-
 gameManager.players.forEach(player => {
   const activePlayer = gameManager.activePlayer;
   if (player.isTurn === true) {
@@ -115,23 +116,41 @@ gameManager.players.forEach(player => {
   }
 });
 
+const boxes = document.querySelectorAll('.box');
+
+const boxHandleClick = (e) => {
+  if (e.target.classList.item(2) != 'disabled') {
+    e.target.classList.add(gameManager.activePlayer.selectedBoardSlot);
+    gameManager.changeActivePlayer(gameManager.players.filter(player => player.isTurn === false)[0]);
+    e.target.classList.add('disabled');
+  }
+}
+
+const boxHandleMouseOver = (e) => {
+  if (e.target.classList.item(2) != 'disabled') {
+    e.target.style.backgroundImage = gameManager.activePlayer.gamePiece;
+  }
+}
+
+const boxHandleMouseOut = (e) => {
+  if (e.target.classList.length <= 1 ) {
+    e.target.style.backgroundImage = 'none';
+  }
+}
+
 const eventListenerForPlayer = (player) => {
   boxes.forEach(box => {
-
-    box.addEventListener('mouseover', (e) => {
-      e.target.style.backgroundImage = gameManager.activePlayer.gamePiece;
-
-        box.addEventListener('click', (e) => {
-          e.target.classList.add(gameManager.activePlayer.selectedBoardSlot);
-          gameManager.changeActivePlayer(gameManager.players.filter(player => player.isTurn === false)[0]);
-        });
-    });
-
-    box.addEventListener('mouseout', (e) => {
-      if (e.target.classList.length <= 1) {
-        e.target.style.backgroundImage = 'none';
-      }
-    });
+    box.addEventListener('click', boxHandleClick);
+    box.addEventListener('mouseover', boxHandleMouseOver);
+    box.addEventListener('mouseout', boxHandleMouseOut);
   });
 }
 eventListenerForPlayer(playerOne);
+
+// const removeEventListenerForPlayer = () => {
+//   boxes.forEach(box => {
+//     box.removeEventListener('mouseover', boxHandleMouseOver);
+//     box.removeEventListener('click', boxHandleClick);
+//     box.removeEventListener('mouseout', boxHandleMouseOut);
+//   });
+// }
