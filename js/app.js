@@ -1,13 +1,9 @@
-// const playerOneIcon = document.querySelector('#player1');
-// const playerTwoIcon = document.querySelector('#player2');
-
 class Player {
-  constructor(isTurn, selectedBoardSlot, gameIconDOMSelector, gamePiece) {
-    this.isTurn = isTurn;
-    this.selectedBoardSlot = selectedBoardSlot;
-    this.gameIconDOMSelector = gameIconDOMSelector;
-    this.gamePiece = gamePiece;
-
+  constructor({ isTurn, selectedBoardSlot, gameIconDOMSelector, gamePiece }) {
+    this.isTurn = isTurn ? isTurn : false;
+    this.selectedBoardSlot = selectedBoardSlot ? selectedBoardSlot : null;
+    this.gameIconDOMSelector = gameIconDOMSelector ? gameIconDOMSelector : null;
+    this.gamePiece = gamePiece ? gamePiece : null;
   }
 
   set name(name) {
@@ -15,7 +11,7 @@ class Player {
   }
 
   get name() {
-    this._name = name;
+    return this._name;
   }
 
   setGameIconClass(cls) {
@@ -23,11 +19,63 @@ class Player {
   }
 }
 
-const playerOne = new Player(true, 'box-filled-1', '#player1', "url('img/o.svg')");
-const playerTwo = new Player(false, 'box-filled-2', '#player2', "url('img/x.svg')");
+class GameManager {
+  constructor({ players = [], activePlayer = null, turnCounter }) {
+    this._players = players;
+    this._activePlayer = activePlayer;
+    this._turnCounter = turnCounter;
+  }
 
-const players = [];
-players.push(playerOne, playerTwo);
+  get players() {
+    return this._players;
+  }
+
+  // Returns the currently acive player
+  get activePlayer() {
+    return this._activePlayer;
+  }
+
+  get turnCounter() {
+    return this._turnCounter;
+  }
+
+  /**
+   * Sets all other player's to not active.
+   * Sets the provided player to active.
+   *
+   * @param {Player} newActivePlayer
+   */
+  changeActivePlayer(newActivePlayer) {
+    this.players.forEach(player => player.isTurn = false);
+    newActivePlayer.isTurn = true;
+    newActivePlayer.setGameIconClass('active');
+    this._activePlayer = newActivePlayer;
+
+    // Remove all mouseover, click, etc. event handlers OR EDIT THE EXISTING ONES
+    // TO USE THE NEW PLAYER'S 'X' OR 'O'
+    // https://developer.mozilla.org/en-US/docs/Web/API/EventTarget/removeEventListener
+  }
+}
+
+const playerOne = new Player({
+  isTurn: true,
+  selectedBoardSlot: 'box-filled-1',
+  gameIconDOMSelector: '#player1',
+  gamePiece: "url('img/o.svg')"
+});
+
+const playerTwo = new Player({
+  isTurn: false,
+  selectedBoardSlot: 'box-filled-2',
+  gameIconDOMSelector: '#player2',
+  gamePiece: "url('img/x.svg')"
+});
+
+const gameManager = new GameManager({
+  players: [ playerOne, playerTwo ],
+});
+
+gameManager.changeActivePlayer(playerOne);
 
 const startGameScreen = () => {
   let startScreenHTML = `
@@ -55,28 +103,35 @@ startButton.addEventListener('click', () => {
     const header = document.querySelector('.board header');
     header.innerHTML += userNameHTML;
   }
-
   document.querySelector('.screen-start').remove();
 });
 
+const boxes = document.querySelectorAll('.box');
 
-players.forEach(player => {
+gameManager.players.forEach(player => {
+  const activePlayer = gameManager.activePlayer;
   if (player.isTurn === true) {
     player.setGameIconClass('active');
-
-    const boxes = document.querySelectorAll('.box');
-
-    boxes.forEach(box => {
-      box.addEventListener('mouseover', (e) => {
-        e.target.style.backgroundImage =  player.gamePiece;
-      });
-      box.addEventListener('mouseout', (e) => {
-        e.target.style.backgroundImage = 'none';
-      });
-      box.addEventListener('click', (e) => {
-        e.target.classList.add(player.selectedBoardSlot);
-      });
-    });
   }
 });
 
+const eventListenerForPlayer = (player) => {
+  boxes.forEach(box => {
+
+    box.addEventListener('mouseover', (e) => {
+      e.target.style.backgroundImage = gameManager.activePlayer.gamePiece;
+
+        box.addEventListener('click', (e) => {
+          e.target.classList.add(gameManager.activePlayer.selectedBoardSlot);
+          gameManager.changeActivePlayer(gameManager.players.filter(player => player.isTurn === false)[0]);
+        });
+    });
+
+    box.addEventListener('mouseout', (e) => {
+      if (e.target.classList.length <= 1) {
+        e.target.style.backgroundImage = 'none';
+      }
+    });
+  });
+}
+eventListenerForPlayer(playerOne);
