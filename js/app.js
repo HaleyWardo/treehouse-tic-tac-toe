@@ -1,13 +1,10 @@
-const gameOver = gameWon => {
-  removeEventListenerForPlayer();
-}
-
 class Player {
-  constructor({ isTurn = false, selectedBoardSlot = null, gameIconDOMSelector = null, gamePiece = null, name = 'Player' }) {
+  constructor({ isTurn = false, selectedBoardSlot = null, gameIconDOMSelector = null, gamePiece = null, winScreen = null, name = 'Player' }) {
     this.isTurn = isTurn;
     this.selectedBoardSlot = selectedBoardSlot;
     this.gameIconDOMSelector = gameIconDOMSelector;
     this.gamePiece = gamePiece;
+    this._winScreen = winScreen;
 
     this._name = name;
     this._selectedSpots = [];
@@ -19,6 +16,10 @@ class Player {
 
   get name() {
     return this._name;
+  }
+
+  get winScreen() {
+    return this._winScreen;
   }
 
   get selectedSpots() {
@@ -122,14 +123,16 @@ const playerOne = new Player({
   isTurn: true,
   selectedBoardSlot: 'box-filled-1',
   gameIconDOMSelector: '#player1',
-  gamePiece: "url('img/o.svg')"
+  gamePiece: "url('img/o.svg')",
+  winScreen: 'screen-win-one'
 });
 
 const playerTwo = new Player({
   isTurn: false,
   selectedBoardSlot: 'box-filled-2',
   gameIconDOMSelector: '#player2',
-  gamePiece: "url('img/x.svg')"
+  gamePiece: "url('img/x.svg')",
+  winScreen: 'screen-win-two'
 });
 
 const gameManager = new GameManager({
@@ -154,6 +157,7 @@ const startGameScreen = () => {
 
 startGameScreen();
 
+const overlay = document.querySelector('.screen');
 const startButton = document.querySelector('.button');
 
 startButton.addEventListener('click', () => {
@@ -166,7 +170,7 @@ startButton.addEventListener('click', () => {
     header.innerHTML += userNameHTML;
   }
 
-  document.querySelector('.screen-start').remove();
+  overlay.style.display = "none";
 });
 
 const activePlayer = gameManager.players.filter(player => player.isTurn === true);
@@ -187,6 +191,9 @@ const boxHandleClick = (e) => {
 
     if (gameWon) {
       // TODO: Someone won, so show the screen and who won
+      overlay.style.display = "";
+      overlay.classList.replace('screen-start', 'screen-win');
+      overlay.classList.add(gameManager.activePlayer.winScreen);
     }
 
     gameManager.changeActivePlayer(gameManager.players.filter(player => player.isTurn === false)[0]);
