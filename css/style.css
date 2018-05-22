@@ -153,4 +153,11 @@ h1 {
       background-color: #3688C3;
       background-image: url(../img/x.svg); }
 
-
+.winner {
+  background-repeat: no-repeat;
+  background-size: contain;
+  background-position: center;
+  margin: 40px auto;
+  padding: 15px;
+  font-size: 90px;
+}

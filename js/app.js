@@ -1,10 +1,11 @@
 class Player {
-  constructor({ isTurn = false, selectedBoardSlot = null, gameIconDOMSelector = null, gamePiece = null, winScreen = null, name = 'Player' }) {
+  constructor({ isTurn = false, selectedBoardSlot = null, gameIconDOMSelector = null, gamePiece = null, winScreen = null, buttonColor = null, name = 'Player' }) {
     this.isTurn = isTurn;
     this.selectedBoardSlot = selectedBoardSlot;
     this.gameIconDOMSelector = gameIconDOMSelector;
     this.gamePiece = gamePiece;
     this._winScreen = winScreen;
+    this._buttonColor = buttonColor;
 
     this._name = name;
     this._selectedSpots = [];
@@ -20,6 +21,14 @@ class Player {
 
   get winScreen() {
     return this._winScreen;
+  }
+
+  get buttonColor() {
+    return this._buttonColor;
+  }
+
+  set selectedSpots(selectedSpots) {
+    this._selectedSpots = selectedSpots;
   }
 
   get selectedSpots() {
@@ -114,8 +123,26 @@ class GameManager {
     return false;
   }
 
-  resetGame() {
+  displayWinner() {
+    nameInput.remove();
+    overlay.style.display = "";
+    overlay.classList.replace('screen-start', 'screen-win');
+    overlay.classList.add(this.activePlayer.winScreen);
+    overlay.setAttribute('id', 'finish');
 
+    startButton.style.color = this.activePlayer.buttonColor;
+  }
+
+  resetGame() {
+    boxes.forEach(box => {
+      box.style.backgroundImage = "none";
+      box.classList.remove('box-filled-1', 'box-filled-2', 'disabled');
+    });
+
+    document.querySelector('.winner').remove();
+
+    this.turnCounter = 0;
+    this.players.forEach(player => player.selectedSpots = []);
   }
 }
 
@@ -124,7 +151,8 @@ const playerOne = new Player({
   selectedBoardSlot: 'box-filled-1',
   gameIconDOMSelector: '#player1',
   gamePiece: "url('img/o.svg')",
-  winScreen: 'screen-win-one'
+  winScreen: 'screen-win-one',
+  buttonColor: '3688C3'
 });
 
 const playerTwo = new Player({
@@ -132,7 +160,8 @@ const playerTwo = new Player({
   selectedBoardSlot: 'box-filled-2',
   gameIconDOMSelector: '#player2',
   gamePiece: "url('img/x.svg')",
-  winScreen: 'screen-win-two'
+  winScreen: 'screen-win-two',
+  buttonColor: 'FFA000'
 });
 
 const gameManager = new GameManager({
@@ -159,19 +188,25 @@ startGameScreen();
 
 const overlay = document.querySelector('.screen');
 const startButton = document.querySelector('.button');
+const nameInput = document.querySelector('#nameInput');
 
-startButton.addEventListener('click', () => {
-  const nameInput = document.querySelector('#nameInput');
 
+const startGame = () => {
   if (nameInput.value != '') {
     playerOne._name = nameInput.value;
     const userNameHTML = `<div class="playerName">Good luck, ${playerOne._name}!</div>`;
     const header = document.querySelector('.board header');
     header.innerHTML += userNameHTML;
+    nameInput.value = '';
   }
-
   overlay.style.display = "none";
-});
+
+  if (startButton.textContent === 'New game') {
+    gameManager.resetGame();
+  }
+};
+
+startButton.addEventListener('click', startGame);
 
 const activePlayer = gameManager.players.filter(player => player.isTurn === true);
 activePlayer[0].setGameIconClass('active');
@@ -191,17 +226,25 @@ const boxHandleClick = (e) => {
 
     if (gameWon) {
       // TODO: Someone won, so show the screen and who won
-      overlay.style.display = "";
-      overlay.classList.replace('screen-start', 'screen-win');
-      overlay.classList.add(gameManager.activePlayer.winScreen);
-    }
+      startButton.textContent = 'New game';
+      const winner = document.createElement('div');
+      winner.textContent = 'Winner';
+      winner.className = 'winner';
+      const overlayHeader = document.querySelector('.screen header');
+      overlayHeader.insertBefore(winner, startButton);
 
+
+      winner.style.backgroundImage = gameManager.activePlayer.gamePiece;
+
+      gameManager.displayWinner();
+    }
     gameManager.changeActivePlayer(gameManager.players.filter(player => player.isTurn === false)[0]);
 
     e.target.classList.add('disabled');
   }
 };
 
+// Event handlers for mouseover, mouseout, and click on boxes.
 const boxHandleMouseOver = (e) => {
   if (e.target.classList.item(2) != 'disabled') {
     e.target.style.backgroundImage = gameManager.activePlayer.gamePiece;
@@ -221,13 +264,14 @@ const eventListenerForPlayer = (player) => {
     box.addEventListener('mouseout', boxHandleMouseOut);
   });
 };
-
 eventListenerForPlayer(playerOne);
 
+// Remove event listener for restarting game.
 const removeEventListenerForPlayer = () => {
   boxes.forEach(box => {
     box.removeEventListener('mouseover', boxHandleMouseOver, false);
     box.removeEventListener('click', boxHandleClick, false);
     box.removeEventListener('mouseout', boxHandleMouseOut, false);
   });
+  startButton.removeEventListener('click', startGame, false);
 };
