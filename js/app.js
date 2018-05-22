@@ -1,9 +1,16 @@
+const gameOver = gameWon => {
+  removeEventListenerForPlayer();
+}
+
 class Player {
-  constructor({ isTurn, selectedBoardSlot, gameIconDOMSelector, gamePiece }) {
-    this.isTurn = isTurn ? isTurn : false;
-    this.selectedBoardSlot = selectedBoardSlot ? selectedBoardSlot : null;
-    this.gameIconDOMSelector = gameIconDOMSelector ? gameIconDOMSelector : null;
-    this.gamePiece = gamePiece ? gamePiece : null;
+  constructor({ isTurn = false, selectedBoardSlot = null, gameIconDOMSelector = null, gamePiece = null, name = 'Player' }) {
+    this.isTurn = isTurn;
+    this.selectedBoardSlot = selectedBoardSlot;
+    this.gameIconDOMSelector = gameIconDOMSelector;
+    this.gamePiece = gamePiece;
+
+    this._name = name;
+    this._selectedSpots = [];
   }
 
   set name(name) {
@@ -12,6 +19,14 @@ class Player {
 
   get name() {
     return this._name;
+  }
+
+  get selectedSpots() {
+    return this._selectedSpots;
+  }
+
+  pushSpot(spot) {
+    this._selectedSpots.push(spot);
   }
 
   setGameIconClass(cls) {
@@ -24,10 +39,21 @@ class Player {
 }
 
 class GameManager {
-  constructor({ players = [], activePlayer = null, turnCounter }) {
+  constructor({ players = [], activePlayer = null, turnCounter = 0 }) {
     this._players = players;
     this._activePlayer = activePlayer;
     this._turnCounter = turnCounter;
+
+    this._winCombos = [
+      [0, 1, 2],
+      [3, 4, 5],
+      [6, 7, 8],
+      [0, 3, 6],
+      [1, 4, 7],
+      [2, 5, 8],
+      [0, 4, 8],
+      [6, 4, 2],
+    ];
   }
 
   get players() {
@@ -41,6 +67,14 @@ class GameManager {
 
   get turnCounter() {
     return this._turnCounter;
+  }
+
+  set turnCounter(value) {
+    this._turnCounter = value;
+  }
+
+  incrementTurnCounter() {
+    this._turnCounter = this._turnCounter + 1;
   }
 
   /**
@@ -57,6 +91,30 @@ class GameManager {
 
     const unActivePlayer = this.players.filter(player => player.isTurn === false);
     unActivePlayer[0].removeGameIconClass('active');
+  }
+
+  /**
+   * Determines if there's a winner
+   *
+   * @param {Array} plays The spots a player has selected
+   * @returns {Boolean} True if a winner, otherwise false
+   */
+  checkWinner(plays) {
+    if (this.turnCounter >= 9) {
+      // TODO: Too many turns, so end the game
+    }
+
+    for (const [index, win] of this._winCombos.entries()) {
+      if (win.every(elem => plays.indexOf(elem) > -1)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  resetGame() {
+
   }
 }
 
@@ -92,7 +150,8 @@ const startGameScreen = () => {
 
   const body = document.querySelector('body');
   body.innerHTML += startScreenHTML;
-}
+};
+
 startGameScreen();
 
 const startButton = document.querySelector('.button');
@@ -106,37 +165,47 @@ startButton.addEventListener('click', () => {
     const header = document.querySelector('.board header');
     header.innerHTML += userNameHTML;
   }
+
   document.querySelector('.screen-start').remove();
 });
 
-gameManager.players.forEach(player => {
-  const activePlayer = gameManager.activePlayer;
-  if (player.isTurn === true) {
-    player.setGameIconClass('active');
-  }
-});
+const activePlayer = gameManager.players.filter(player => player.isTurn === true);
+activePlayer[0].setGameIconClass('active');
 
 const boxes = document.querySelectorAll('.box');
 
 const boxHandleClick = (e) => {
   if (e.target.classList.item(2) != 'disabled') {
+    const index = parseInt(e.target.getAttribute('data-box-index'));
+
     e.target.classList.add(gameManager.activePlayer.selectedBoardSlot);
+
+    // Add the selected spot to the user who made the move
+    gameManager.activePlayer.pushSpot(index);
+    gameManager.incrementTurnCounter();
+    const gameWon = gameManager.checkWinner(gameManager.activePlayer.selectedSpots);
+
+    if (gameWon) {
+      // TODO: Someone won, so show the screen and who won
+    }
+
     gameManager.changeActivePlayer(gameManager.players.filter(player => player.isTurn === false)[0]);
+
     e.target.classList.add('disabled');
   }
-}
+};
 
 const boxHandleMouseOver = (e) => {
   if (e.target.classList.item(2) != 'disabled') {
     e.target.style.backgroundImage = gameManager.activePlayer.gamePiece;
   }
-}
+};
 
 const boxHandleMouseOut = (e) => {
   if (e.target.classList.length <= 1 ) {
     e.target.style.backgroundImage = 'none';
   }
-}
+};
 
 const eventListenerForPlayer = (player) => {
   boxes.forEach(box => {
@@ -144,13 +213,14 @@ const eventListenerForPlayer = (player) => {
     box.addEventListener('mouseover', boxHandleMouseOver);
     box.addEventListener('mouseout', boxHandleMouseOut);
   });
-}
+};
+
 eventListenerForPlayer(playerOne);
 
-// const removeEventListenerForPlayer = () => {
-//   boxes.forEach(box => {
-//     box.removeEventListener('mouseover', boxHandleMouseOver);
-//     box.removeEventListener('click', boxHandleClick);
-//     box.removeEventListener('mouseout', boxHandleMouseOut);
-//   });
-// }
+const removeEventListenerForPlayer = () => {
+  boxes.forEach(box => {
+    box.removeEventListener('mouseover', boxHandleMouseOver, false);
+    box.removeEventListener('click', boxHandleClick, false);
+    box.removeEventListener('mouseout', boxHandleMouseOut, false);
+  });
+};
