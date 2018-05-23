@@ -286,7 +286,7 @@ const boxHandleMouseOut = (e) => {
   }
 };
 
-const eventListenerForPlayer = (player) => {
+const eventListenerForPlayer = () => {
   boxes.forEach(box => {
     box.addEventListener('click', boxHandleClick);
     box.addEventListener('mouseover', boxHandleMouseOver);
@@ -294,4 +294,4 @@ const eventListenerForPlayer = (player) => {
   });
 };
 
-eventListenerForPlayer(playerOne);
+eventListenerForPlayer();
