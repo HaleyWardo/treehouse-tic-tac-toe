@@ -1,18 +1,3 @@
-const displayWinnerScreen = (tieOrWinner, screenWin) => {
-  startButton.textContent = 'New game';
-  const winner = document.createElement('div');
-  winner.textContent = tieOrWinner;
-  winner.className = 'winner';
-  const overlayHeader = document.querySelector('.screen header');
-  overlayHeader.insertBefore(winner, startButton);
-
-  nameInput.remove();
-  overlay.style.display = 'inline';
-  overlay.classList.replace('screen-start', 'screen-win');
-  overlay.classList.add(screenWin);
-  overlay.setAttribute('id', 'finish');
-}
-
 class Player {
   constructor({ isTurn = false, selectedBoardSlot = null, gameIconDOMSelector = null, gamePiece = null, winScreen = null, buttonColor = null, name = 'Player' }) {
     this.isTurn = isTurn;
@@ -64,11 +49,13 @@ class Player {
 }
 
 class GameManager {
-  constructor({ players = [], activePlayer = null, turnCounter = 0 }) {
+  constructor({ players = [], activePlayer = null, turnCounter = 0, startButton = null, overlay = null }) {
     this._players = players;
     this._activePlayer = activePlayer;
     this._turnCounter = turnCounter;
     this._isGameWon = null;
+    this._startButton = startButton;
+    this._overlay = overlay;
 
     this._winCombos = [
       [0, 1, 2],
@@ -112,6 +99,36 @@ class GameManager {
   }
 
   /**
+   * Displays the start game overlay
+   */
+  startGameScreen() {
+    const startScreenHTML = `
+    <div class="screen screen-start" id="start">
+      <header>
+        <h1>Tic Tac Toe</h1>
+        <a href="#" class="button">Start game</a>
+      </header>
+    </div>`;
+
+    const body = document.querySelector('body');
+    body.innerHTML += startScreenHTML;
+
+    this._overlay = document.querySelector('.screen');
+    this._startButton = document.querySelector('.button');
+
+    this._startButton.addEventListener('click', () => {
+      this._overlay.style.display = "none";
+
+      if (this._startButton.textContent === 'New game') {
+        this.resetGame();
+      }
+    });
+
+    const activePlayer = this.players.filter(player => player.isTurn === true);
+    activePlayer[0].setGameIconClass('active');
+  }
+
+  /**
    * Sets all other player's to not active.
    * Sets the provided player to active.
    *
@@ -136,6 +153,7 @@ class GameManager {
   checkWinner(plays) {
     if (this.isGameWon === null && this.turnCounter >= 9) {
       this.displayTie();
+      return;
     }
 
     for (const [index, win] of this._winCombos.entries()) {
@@ -147,15 +165,24 @@ class GameManager {
     return false;
   }
 
+  /**
+   * Displays the win screen
+   */
   displayWinner() {
-    displayWinnerScreen('Winner', this.activePlayer.winScreen);
-    startButton.style.color = this.activePlayer.buttonColor;
+    this.displayWinnerScreen('Winner', this.activePlayer.winScreen);
+    this._startButton.style.color = this.activePlayer.buttonColor;
   }
 
+  /**
+   * Displays the tie screen
+   */
   displayTie() {
-    displayWinnerScreen('Tie', 'screen-win-tie');
+    this.displayWinnerScreen('Tie', 'screen-win-tie');
   }
 
+  /**
+   * Resets the game board for a new game
+   */
   resetGame() {
     boxes.forEach(box => {
       box.style.backgroundImage = "none";
@@ -164,11 +191,32 @@ class GameManager {
 
     document.querySelector('.winner').remove();
 
-    overlay.classList.remove('screen-win-one', 'screen-win-two');
-    this.turnCounter = 0;
+    this._overlay.classList.remove('screen-win-one', 'screen-win-two');
     this.players.forEach(player => player.selectedSpots = []);
 
+    this.turnCounter = 0;
     this.isGameWon = null;
+  }
+
+  /**
+   * Creates the winner element
+   * @param {String} overlayText - The text to display
+   * @param {String} overlayClass - The class to apply
+   */
+  displayWinnerScreen(overlayText, overlayClass) {
+    this._startButton.textContent = 'New game';
+
+    const winner = document.createElement('div');
+    winner.textContent = overlayText;
+    winner.className = 'winner';
+
+    const overlayHeader = document.querySelector('.screen header');
+    overlayHeader.insertBefore(winner, this._startButton);
+
+    this._overlay.style.display = 'inline';
+    this._overlay.classList.replace('screen-start', 'screen-win');
+    this._overlay.classList.add(overlayClass);
+    this._overlay.setAttribute('id', 'finish');
   }
 }
 
@@ -191,51 +239,11 @@ const playerTwo = new Player({
 });
 
 const gameManager = new GameManager({
-  players: [ playerOne, playerTwo ],
+  players: [ playerOne, playerTwo ]
 });
 
+gameManager.startGameScreen();
 gameManager.changeActivePlayer(playerOne);
-
-const startGameScreen = () => {
-  let startScreenHTML = `
-    <div class="screen screen-start" id="start">
-      <header>
-        <h1>Tic Tac Toe</h1>
-        <input id="nameInput" type="text" placeholder="Name"/>
-        <a href="#" class="button">Start game</a>
-      </header>
-    </div>`;
-
-  const body = document.querySelector('body');
-  body.innerHTML += startScreenHTML;
-};
-
-startGameScreen();
-
-const overlay = document.querySelector('.screen');
-const startButton = document.querySelector('.button');
-const nameInput = document.querySelector('#nameInput');
-
-
-const startGame = () => {
-  if (nameInput.value != '') {
-    playerOne._name = nameInput.value;
-    const userNameHTML = `<div class="playerName">Good luck, ${playerOne._name}!</div>`;
-    const header = document.querySelector('.board header');
-    header.innerHTML += userNameHTML;
-    nameInput.value = '';
-  }
-  overlay.style.display = "none";
-
-  if (startButton.textContent === 'New game') {
-    gameManager.resetGame();
-  }
-};
-
-startButton.addEventListener('click', startGame);
-
-const activePlayer = gameManager.players.filter(player => player.isTurn === true);
-activePlayer[0].setGameIconClass('active');
 
 const boxes = document.querySelectorAll('.box');
 
@@ -251,7 +259,6 @@ const boxHandleClick = (e) => {
     const gameWon = gameManager.checkWinner(gameManager.activePlayer.selectedSpots);
 
     if (gameWon) {
-      // TODO: Someone won, so show the screen and who won
       gameManager.displayWinner();
 
       let winner = document.querySelector('.winner');
@@ -259,6 +266,7 @@ const boxHandleClick = (e) => {
 
       gameManager.isGameWon = true;
     }
+
     gameManager.changeActivePlayer(gameManager.players.filter(player => player.isTurn === false)[0]);
 
     e.target.classList.add('disabled');
@@ -285,15 +293,5 @@ const eventListenerForPlayer = (player) => {
     box.addEventListener('mouseout', boxHandleMouseOut);
   });
 };
+
 eventListenerForPlayer(playerOne);
-
-// Remove event listener for restarting game.
-const removeEventListenerForPlayer = () => {
-  boxes.forEach(box => {
-    box.removeEventListener('mouseover', boxHandleMouseOver, false);
-    box.removeEventListener('click', boxHandleClick, false);
-    box.removeEventListener('mouseout', boxHandleMouseOut, false);
-  });
-  startButton.removeEventListener('click', startGame, false);
-};
-
