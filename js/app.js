@@ -1,3 +1,18 @@
+const displayWinnerScreen = (tieOrWinner, screenWin) => {
+  startButton.textContent = 'New game';
+  const winner = document.createElement('div');
+  winner.textContent = tieOrWinner;
+  winner.className = 'winner';
+  const overlayHeader = document.querySelector('.screen header');
+  overlayHeader.insertBefore(winner, startButton);
+
+  nameInput.remove();
+  overlay.style.display = 'inline';
+  overlay.classList.replace('screen-start', 'screen-win');
+  overlay.classList.add(screenWin);
+  overlay.setAttribute('id', 'finish');
+}
+
 class Player {
   constructor({ isTurn = false, selectedBoardSlot = null, gameIconDOMSelector = null, gamePiece = null, winScreen = null, buttonColor = null, name = 'Player' }) {
     this.isTurn = isTurn;
@@ -53,6 +68,7 @@ class GameManager {
     this._players = players;
     this._activePlayer = activePlayer;
     this._turnCounter = turnCounter;
+    this._isGameWon = null;
 
     this._winCombos = [
       [0, 1, 2],
@@ -83,6 +99,14 @@ class GameManager {
     this._turnCounter = value;
   }
 
+  set isGameWon(isGameWon) {
+    this._isGameWon = isGameWon;
+  }
+
+  get isGameWon() {
+    return this._isGameWon;
+  }
+
   incrementTurnCounter() {
     this._turnCounter = this._turnCounter + 1;
   }
@@ -110,8 +134,8 @@ class GameManager {
    * @returns {Boolean} True if a winner, otherwise false
    */
   checkWinner(plays) {
-    if (this.turnCounter >= 9) {
-      // TODO: Too many turns, so end the game
+    if (this.isGameWon === null && this.turnCounter >= 9) {
+      this.displayTie();
     }
 
     for (const [index, win] of this._winCombos.entries()) {
@@ -124,13 +148,12 @@ class GameManager {
   }
 
   displayWinner() {
-    nameInput.remove();
-    overlay.style.display = "";
-    overlay.classList.replace('screen-start', 'screen-win');
-    overlay.classList.add(this.activePlayer.winScreen);
-    overlay.setAttribute('id', 'finish');
-
+    displayWinnerScreen('Winner', this.activePlayer.winScreen);
     startButton.style.color = this.activePlayer.buttonColor;
+  }
+
+  displayTie() {
+    displayWinnerScreen('Tie', 'screen-win-tie');
   }
 
   resetGame() {
@@ -141,8 +164,11 @@ class GameManager {
 
     document.querySelector('.winner').remove();
 
+    overlay.classList.remove('screen-win-one', 'screen-win-two');
     this.turnCounter = 0;
     this.players.forEach(player => player.selectedSpots = []);
+
+    this.isGameWon = null;
   }
 }
 
@@ -226,17 +252,12 @@ const boxHandleClick = (e) => {
 
     if (gameWon) {
       // TODO: Someone won, so show the screen and who won
-      startButton.textContent = 'New game';
-      const winner = document.createElement('div');
-      winner.textContent = 'Winner';
-      winner.className = 'winner';
-      const overlayHeader = document.querySelector('.screen header');
-      overlayHeader.insertBefore(winner, startButton);
+      gameManager.displayWinner();
 
-
+      let winner = document.querySelector('.winner');
       winner.style.backgroundImage = gameManager.activePlayer.gamePiece;
 
-      gameManager.displayWinner();
+      gameManager.isGameWon = true;
     }
     gameManager.changeActivePlayer(gameManager.players.filter(player => player.isTurn === false)[0]);
 
@@ -275,3 +296,4 @@ const removeEventListenerForPlayer = () => {
   });
   startButton.removeEventListener('click', startGame, false);
 };
+
